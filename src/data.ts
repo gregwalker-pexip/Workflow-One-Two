@@ -1,9 +1,5 @@
 import type { PopupRequest, RPCCallPayload } from "@pexip/plugin-api";
 
-import {
-  myName,
-} from "./index";
-
 export const WorkFlowOne_Group: RPCCallPayload<"ui:button:add"> = {
   id: "workflowOne",
   position: "toolbar",
@@ -63,8 +59,7 @@ export const GeolocationPrompt: RPCCallPayload<"ui:prompt:open"> = {
 
 export const StatementForm = {
   title: "Statement Approval",
-  description:
-    "I confirm the provided statement as being accurate and true.",
+  description: "I confirm the provided statement as being accurate and true.",
   form: {
     elements: {
       name: {
@@ -232,7 +227,7 @@ export const PromptButton: RPCCallPayload<"ui:button:add"> = {
 
 export const FormPrompt: RPCCallPayload<"ui:prompt:open"> = {
   title: "Popup Confirmation",
-  description: "Please confirm access camera control" ,
+  description: "Please confirm access camera control",
   prompt: {
     primaryAction: "Access",
     secondaryAction: "Close",
