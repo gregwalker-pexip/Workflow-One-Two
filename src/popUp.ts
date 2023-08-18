@@ -42,37 +42,3 @@ export const showPromptWithPopUp = async (promptPayload: RPCCallPayload<'ui:prom
     });
   }
 }
-
-export const showFormWithPopUp = async (formPayload: FormPayload, popUpUrl: string): Promise<void> => {
-  const plugin = getPlugin();
-
-  // Check if the plugin is served from the same domain as Web App 3
-  let sameDomain: boolean = true
-  
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-    parent.document
-  } catch (e) {
-    sameDomain = false
-  }
-
-  if (sameDomain) {
-    Object.assign(
-      formPayload, {
-        opensPopup: {
-          id: popUpId,
-          openParams: [popUpUrl, '', popUpDimensions]
-        }
-      }
-    );
-    await plugin.ui.showForm(formPayload);
-  } else {
-    const prompt = await plugin.ui.addForm(formPayload);
-    prompt.onInput.add((result) => {
-      if (Object.keys(result).length !== 0) {
-        window.open(popUpUrl, '', popUpDimensions);
-      }
-      prompt.remove();
-    });
-  }
-}

@@ -53,7 +53,7 @@ export const getVideoFeccFormConfig =(): FormPayload => ({
   description: 'Control video systems remote camera',
   form: {
     elements: {
-      feccList: {
+      feccUuid: {
         name: 'Select video system (FECC enabled):',
         type: 'select',
         options: getFeccParticipantsOptions(),

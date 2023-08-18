@@ -1,14 +1,18 @@
-import { getVideoFeccFormConfig, videoFeccFormSameDomainConfig } from './data/forms';
+import { getConferenceAlias } from './conference';
+import { getVideoFeccFormConfig } from './data/forms';
 import { roomDirectory } from './data/options';
+import { formFeccFailedConfig, formFeccSuccessConfig } from './data/prompts';
 import { getLogger } from './logger';
 import { getPlugin } from './plugin'
-
-// TODO: Only for first compilation
-const feccListOptions: any[] = [];
-const conferenceAlias = '';
-const selfName = '';
+import { popUpBaseUrlFecc, showPromptWithPopUp } from './popUp';
+import { getCurrentUser } from './user';
 
 const logger = getLogger('workflowTwo.ts');
+
+interface VideoFeccInput {
+  feccUuid: string;
+  hostPin: string;
+}
 
 export const showVideoPhonebook = async(): Promise<void> => {
   const plugin = getPlugin();
@@ -47,27 +51,24 @@ export const showVideoPhonebook = async(): Promise<void> => {
 export const showVideoFecc = async (): Promise<void> => {
   const plugin = getPlugin();
 
-  let urlPop;
-  const input = await plugin.ui.addForm(getVideoFeccFormConfig());
+  const form = await plugin.ui.addForm(getVideoFeccFormConfig());
 
-  await input.onInput.add((formInput) => {
-    var feccSelection = formInput.feccList;
-    var hostPIN = formInput.hostPIN;
+  await form.onInput.add(async (input) => {
+    const inputParams = input as unknown as VideoFeccInput;
+    const feccUuid = inputParams.feccUuid;
+    const hostPin = btoa(inputParams.hostPin);
+    const conferenceAlias = getConferenceAlias();
+    const displayName = getCurrentUser().displayName;
 
-    if (feccSelection && feccSelection !== '0') {
-      urlPop =
-        'https://au.pextest.com/sapol-fecc-web-v3/branding/plugins/sapol-plugin/fecc.web/?u=' +
-        feccSelection +
-        '&c=' +
-        conferenceAlias +
-        '&n=' +
-        selfName +
-        '&x=' +
-        btoa(hostPIN);
-
-      console.log('Dynamic URL -> Pop-up: ', urlPop);
+    form.remove();
+    
+    if (inputParams.feccUuid != '0') {
+      const popUpUrl = `${popUpBaseUrlFecc}?u=${feccUuid}&c=${conferenceAlias}&n=${displayName}&x=${hostPin}`;
+      logger.info('Dynamic URL -> Pop-up: ', popUpUrl);
+      await showPromptWithPopUp(formFeccSuccessConfig, popUpUrl);
+    } else {
+      await plugin.ui.showPrompt(formFeccFailedConfig);
     }
 
-    input.remove();
   });
 }
