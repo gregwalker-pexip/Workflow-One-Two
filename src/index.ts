@@ -1,11 +1,11 @@
-import { registerPlugin } from "@pexip/plugin-api";
+import { registerPlugin } from '@pexip/plugin-api';
 
-import { setPlugin } from "./plugin";
-import { initializeEvents } from "./events";
-import { initializeButtons } from "./buttons";
+import { setPlugin } from './plugin';
+import { initializeEvents } from './events';
+import { initializeButtons } from './buttons';
 
 const plugin = await registerPlugin({
-  id: "workflow-demo-plugin",
+  id: 'workflow-demo-plugin',
   version: 0,
 });
 

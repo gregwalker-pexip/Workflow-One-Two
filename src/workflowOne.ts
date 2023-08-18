@@ -1,12 +1,11 @@
-import { ChecklistElement } from '@pexip/plugin-api';
 import { getLogger } from './logger';
-import { getCleanDisplayName, getParticipants } from './participants';
 import { getPlugin } from './plugin';
-import { getUser } from './user';
+import { getCurrentUser, getSelectedUser } from './user';
+import { getManageParticipantForm, statementFormConfig, wrapUpMeetingFormConfig } from './data/forms';
+import { ApplicationMessageCommand } from './types/ApplicationMessageCommand';
+import { geolocationPromptConfig } from './data/prompts';
 
 const logger = getLogger('workflowOne.ts');
-
-const selectedParticipant = '';
 
 interface ConferenceConfig {
   participant: string;
@@ -21,75 +20,57 @@ interface ConferenceConfig {
 export const manageParticipant = async (): Promise<void> => {
   const plugin = getPlugin();
   
-  logger.info('Checklist Options: ', getParticipantsOptions());
+  logger.info('Checklist Options: ', getManageParticipantForm());
 
-  const input = await plugin.ui.addForm({
-    title: 'Manage Participant',
-    description: 'Select participant for interaction.',
-    form: {
-      elements: {
-        participant: {
-          name: 'Participant:',
-          type: 'select',
-          options: getParticipantsOptions(),
-        },
-        conferenceOptions: {
-          name: 'Meeting Options:',
-          type: 'checklist',
-          options: [
-            { id: 'spotlightUser', label: 'Spotlight User', checked: true },
-            {
-              id: 'spotlightSelf',
-              label: 'Spotlight Self (secondary)',
-              checked: true,
-            },
-            { id: 'focusLayout', label: 'Focussed Layout (1:1)' },
-            { id: 'lockConference', label: 'Lock Meeting' },
-          ],
-        },
-      },
-      submitBtnTitle: 'Apply',
+  const form = await plugin.ui.addForm(getManageParticipantForm());
+  form.onInput.add((config) => {
+    if (Object.keys(config).length !== 0) {
+      configureConference(config as unknown as ConferenceConfig);
     }
-  });
-  input.onInput.add((config) => {
-    configureConference(config as ConferenceConfig)
+    form.remove();
   })
 }
 
 export const requestLocation = (): void => {
   const plugin = getPlugin();
   plugin.conference.sendApplicationMessage({
-    payload: { pexCommand: 'requestGeolocation' },
-    participantUuid: selectedParticipant,
+    payload: {
+      command: ApplicationMessageCommand.RequestLocation
+    },
+    participantUuid: getSelectedUser().uuid,
   });
   plugin.ui.showToast({ message: 'Location request pending 📌' });
 }
 
-export const shareStatement = (): void => {
+export const requestShareStatement = (): void => {
   const plugin = getPlugin();
   logger.info('Share document link');
 
   plugin.conference.sendMessage({
     payload:
-      'Your Statement: ' + 'https://cms.docs.gov.au/doc-123456789.pdf/',
+      'Your Statement: https://cms.docs.gov.au/doc-123456789.pdf/',
   });
   plugin.ui.showToast({
     message: 'Document link has been shared via chat 💬',
   });
 
   plugin.conference.sendApplicationMessage({
-    payload: { pexCommand: 'sharingStatement' },
-    participantUuid: selectedParticipant,
+    payload: { 
+      command: ApplicationMessageCommand.ShareStatement
+    },
+    participantUuid: getSelectedUser().uuid,
   });
 }
 
-export const approveStatement = () => {
+export const requestSignStatement = (): void => {
   const plugin = getPlugin();
   logger.info('Request statement approval');
 
   plugin.conference.sendApplicationMessage({
-    payload: { pexCommand: 'requestSignStatement' },
-    participantUuid: selectedParticipant,
+    payload: {
+      command: ApplicationMessageCommand.RequestSignStatement
+    },
+    participantUuid: getSelectedUser().uuid,
   });
   plugin.ui.showToast({
     message: 'Approval request sent...',
@@ -98,34 +79,110 @@ export const approveStatement = () => {
 
 export const wrapUpMeeting = async (): Promise<void> => {
   const plugin = getPlugin();
-  const input = await plugin.ui.addForm({
-    title: 'Meeting Wrap-up',
-    description: 'What would you like to do?',
-    form: {
-      elements: {
-        actionList: {
-          name: 'Action List:',
-          type: 'select',
-          options: [
-            { id: 'endMeeting', label: 'End Meeting' },
-            { id: 'leaveMeeting', label: 'Leave Meeting' },
-            { id: 'somethingElse', label: 'Something Else Perhaps' },
-          ],
-        },
-      },
-      submitBtnTitle: 'Apply',
-    }
-  })
+  const input = await plugin.ui.addForm(wrapUpMeetingFormConfig);
 }
 
-const getParticipantsOptions = (): ChecklistElement['options'] => {
-  return getParticipants().map((participant) => ({
-    id: participant.uuid,
-    label: getCleanDisplayName(participant)
-  }));
-};
+export const shareLocation = async(senderDisplayName: string): Promise<void> => {
+  const plugin = getPlugin();
+
+  void plugin.ui.showToast({
+    message: `${senderDisplayName} has requested your location 📌`,
+  });
+
+  const input = await plugin.ui.showPrompt(geolocationPromptConfig);
+
+  if (input === "Accept") {
+    const pos = null;
+    const geoLoc = navigator.geolocation;
+
+    if (geoLoc) {
+      let id = geoLoc.watchPosition(
+        (position: GeolocationPosition) => {
+          console.log(position);
+
+          let geoInfo =
+            "Latitude/Longitude(Accuracy): " +
+            position.coords.latitude +
+            ", " +
+            position.coords.longitude +
+            " (" +
+            position.coords.accuracy.toFixed() +
+            "m)";
+
+          let googleMapLink =
+            "https://www.google.com/maps/search/?api=1&query=" +
+            position.coords.latitude +
+            "," +
+            position.coords.longitude;
+
+          console.log(geoInfo);
+          console.log(googleMapLink);
+
+          plugin.conference.sendMessage({
+            payload:
+              "📌 Location (~" +
+              position.coords.accuracy.toFixed() +
+              "m): " +
+              googleMapLink,
+          });
+
+          geoLoc.clearWatch(id);
+        },
+        (err: GeolocationPositionError) => {
+          plugin.conference.sendMessage({
+            payload: "📌 Location not available",
+
+            // + err.message,
+          });
+          console.log("📌", err);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 1000,
+        }
+      );
+    }
+  } else {
+    //On dismiss button
+    plugin.conference.sendMessage({
+      payload: "📌 Location request denied",
+    });
+  }
+}
+
+export const shareStatement = (senderDisplayName: string): void => {
+  const plugin = getPlugin();
+
+  plugin.ui.showToast({
+    message: `${senderDisplayName} has shared statement via chat 💬`,
+  });
+  plugin.conference.sendMessage({
+    payload: "🧾 User has received statement link for review",
+  });
+}
+
+export const signStatement = async(senderUuid: string): Promise<void> => {
+  const plugin = getPlugin();
+
+  plugin.ui.showToast({
+    message: `${getCurrentUser().displayName}, please approve statement.`,
+  });
+  const input = await plugin.ui.addForm(statementFormConfig);
+
+  input.onInput.add((formInput) => {
+    plugin.conference.sendMessage({
+      payload: "✅ Statement has been signed: " + formInput.name,
+    });
+    plugin.conference.sendMessage({
+      payload: "✅ Statement has been signed: " + formInput.name,
+      participantUuid: senderUuid,
+    });
+    input.remove();
+  });
+}
 
 const configureConference = (config: ConferenceConfig): void => {
+  logger.info(config);
   const plugin = getPlugin();
 
   plugin.conference.spotlight({
@@ -134,7 +191,7 @@ const configureConference = (config: ConferenceConfig): void => {
   });
 
   plugin.conference.spotlight({
-    participantUuid: getUser().uuid,
+    participantUuid: getCurrentUser().uuid,
     enable: config.conferenceOptions.spotlightSelf
   });
 

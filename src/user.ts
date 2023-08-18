@@ -1,11 +1,20 @@
-import { InfinityParticipant } from "./types/InfinityParticipant"
+import { InfinityParticipant } from './types/InfinityParticipant'
 
-let user: InfinityParticipant
+let currentUser: InfinityParticipant;
+let selectedUser: InfinityParticipant;
 
-export const setUser = (participant: InfinityParticipant): void => {
-  user = participant;
+export const setCurrentUser = (participant: InfinityParticipant): void => {
+  currentUser = participant;
 };
 
-export const getUser = (): InfinityParticipant => {
-  return user;
+export const getCurrentUser = (): InfinityParticipant => {
+  return currentUser;
 };
+
+export const setSelectedUser = (participant: InfinityParticipant): void => {
+  selectedUser = participant;
+}
+
+export const getSelectedUser = (): InfinityParticipant => {
+  return selectedUser;
+}

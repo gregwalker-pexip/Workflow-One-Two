@@ -1,3 +1,4 @@
+import { getVideoFeccFormConfig, videoFeccFormSameDomainConfig } from './data/forms';
 import { roomDirectory } from './data/options';
 import { getLogger } from './logger';
 import { getPlugin } from './plugin'
@@ -47,28 +48,7 @@ export const showVideoFecc = async (): Promise<void> => {
   const plugin = getPlugin();
 
   let urlPop;
-  const input = await plugin.ui.addForm({
-    title: 'Far End Camera Control',
-    description: 'Control video systems remote camera',
-    form: {
-      elements: {
-        feccList: {
-          name: 'Select video system (FECC enabled):',
-          type: 'select',
-          options: feccListOptions,
-        },
-        hostPIN: {
-          name: 'Host PIN (if required):',
-          type: 'password',
-        },
-      },
-      opensPopup: {
-        id: 'mypopUpId',
-        openParams: [urlPop, '', 'width=200,height=200'],
-      },
-      submitBtnTitle: 'Select',
-    },
-  });
+  const input = await plugin.ui.addForm(getVideoFeccFormConfig());
 
   await input.onInput.add((formInput) => {
     var feccSelection = formInput.feccList;

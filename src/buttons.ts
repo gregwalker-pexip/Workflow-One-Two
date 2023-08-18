@@ -7,14 +7,14 @@ import {
   WorkflowTwoButtonId
 } from './data/buttons';
 import {
-  approveStatement,
   manageParticipant,
   requestLocation,
-  shareStatement,
+  requestShareStatement,
+  requestSignStatement,
   wrapUpMeeting
 } from './workflowOne';
-import { formPromptConfig, formPromptSameDomainConfig } from './data/prompts';
-import { popUpDimensions, popUpId, popUpUrl } from './data/popUp';
+import { formPromptConfig } from './data/prompts';
+import { popUpId, popUpUrlSupport, showPromptWithPopUp } from './popUp';
 import { showVideoFecc, showVideoPhonebook } from './workflowTwo';
 
 type ButtonSignalButtonId = {
@@ -59,12 +59,12 @@ const handleWorkflowOne = (buttonSignal: ButtonSignal): void => {
       requestLocation();
       break;
     }
-    case WorkflowOneButtonId.ShareStatement: {
-      shareStatement();
+    case WorkflowOneButtonId.RequestShareStatement: {
+      requestShareStatement();
       break;
     }
-    case WorkflowOneButtonId.ApproveStatement: {
-      approveStatement();
+    case WorkflowOneButtonId.RequestSignStatement: {
+      requestSignStatement();
       break;
     }
     case WorkflowOneButtonId.WrapUpMeeting: {
@@ -95,25 +95,6 @@ const handleWorkflowTwo = (buttonSignal: ButtonSignal): void => {
 };
 
 const handlePrompt = async (): Promise<void> => {
-  const plugin = getPlugin();
-
-  // Check if the plugin is served from the same domain as Web App 3
-  let sameDomain: boolean = true
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-    parent.document
-  } catch (e) {
-    sameDomain = false
-  }
-  if (sameDomain) {
-    await plugin.ui.showPrompt(formPromptSameDomainConfig);
-  } else {
-    const prompt = await plugin.ui.addPrompt(formPromptConfig);
-    prompt.onInput.add((result) => {
-      if (result === formPromptConfig.prompt.primaryAction) {
-        window.open(popUpUrl, '', popUpDimensions);
-      }
-      prompt.remove();
-    });
-  }
+  const popUpUrl = popUpUrlSupport;
+  await showPromptWithPopUp(formPromptConfig, popUpUrl);
 };
