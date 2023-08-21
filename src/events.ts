@@ -10,6 +10,7 @@ import type { Plugin } from '@pexip/plugin-api';
 import { shareLocation, shareStatement, signStatement } from './workflowOne';
 
 const logger = getLogger('events.ts');
+logger.info('TEST')
 
 let plugin: Plugin;
 

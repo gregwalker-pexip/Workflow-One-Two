@@ -1,9 +1,10 @@
 import { getLogger } from './logger';
 import { getPlugin } from './plugin';
-import { getCurrentUser, getSelectedUser } from './user';
+import { getCurrentUser, getSelectedUser, setSelectedUser } from './user';
 import { getManageParticipantForm, statementFormConfig, wrapUpMeetingFormConfig } from './data/forms';
 import { ApplicationMessageCommand } from './types/ApplicationMessageCommand';
 import { geolocationPromptConfig } from './data/prompts';
+import { getParticipants } from './participants';
 
 const logger = getLogger('workflowOne.ts');
 
@@ -25,7 +26,12 @@ export const manageParticipant = async (): Promise<void> => {
   const form = await plugin.ui.addForm(getManageParticipantForm());
   form.onInput.add((config) => {
     if (Object.keys(config).length !== 0) {
-      configureConference(config as unknown as ConferenceConfig);
+      const confConfig = config as unknown as ConferenceConfig;
+      const user = getParticipants().find((participant) => participant.uuid === confConfig.participant);
+      if (user != null) {
+        setSelectedUser(user);
+        configureConference(confConfig);
+      }
     }
     form.remove();
   })
@@ -79,7 +85,7 @@ export const requestSignStatement = (): void => {
 
 export const wrapUpMeeting = async (): Promise<void> => {
   const plugin = getPlugin();
-  const input = await plugin.ui.addForm(wrapUpMeetingFormConfig);
+  const form = await plugin.ui.addForm(wrapUpMeetingFormConfig);
 }
 
 export const shareLocation = async(senderDisplayName: string): Promise<void> => {
@@ -91,61 +97,23 @@ export const shareLocation = async(senderDisplayName: string): Promise<void> => 
 
   const input = await plugin.ui.showPrompt(geolocationPromptConfig);
 
-  if (input === "Accept") {
-    const pos = null;
-    const geoLoc = navigator.geolocation;
-
-    if (geoLoc) {
-      let id = geoLoc.watchPosition(
-        (position: GeolocationPosition) => {
-          console.log(position);
-
-          let geoInfo =
-            "Latitude/Longitude(Accuracy): " +
-            position.coords.latitude +
-            ", " +
-            position.coords.longitude +
-            " (" +
-            position.coords.accuracy.toFixed() +
-            "m)";
-
-          let googleMapLink =
-            "https://www.google.com/maps/search/?api=1&query=" +
-            position.coords.latitude +
-            "," +
-            position.coords.longitude;
-
-          console.log(geoInfo);
-          console.log(googleMapLink);
-
-          plugin.conference.sendMessage({
-            payload:
-              "📌 Location (~" +
-              position.coords.accuracy.toFixed() +
-              "m): " +
-              googleMapLink,
-          });
-
-          geoLoc.clearWatch(id);
-        },
-        (err: GeolocationPositionError) => {
-          plugin.conference.sendMessage({
-            payload: "📌 Location not available",
-
-            // + err.message,
-          });
-          console.log("📌", err);
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 1000,
-        }
-      );
+  if (input === 'Accept') {
+    try {
+      const position = await getLocation();
+      const link = getGoogleMapsLink(position);
+      plugin.conference.sendMessage({
+        payload: `📌 Location (~${position.coords.accuracy.toFixed()}m): ${link}`
+      });
+    } catch (e) {
+      logger.error(e);
+      plugin.conference.sendMessage({
+        payload: '📌 Location not available',
+      });
     }
   } else {
     //On dismiss button
     plugin.conference.sendMessage({
-      payload: "📌 Location request denied",
+      payload: '📌 Location request denied',
     });
   }
 }
@@ -157,7 +125,7 @@ export const shareStatement = (senderDisplayName: string): void => {
     message: `${senderDisplayName} has shared statement via chat 💬`,
   });
   plugin.conference.sendMessage({
-    payload: "🧾 User has received statement link for review",
+    payload: '🧾 User has received statement link for review',
   });
 }
 
@@ -171,10 +139,10 @@ export const signStatement = async(senderUuid: string): Promise<void> => {
 
   input.onInput.add((formInput) => {
     plugin.conference.sendMessage({
-      payload: "✅ Statement has been signed: " + formInput.name,
+      payload: '✅ Statement has been signed: ' + formInput.name,
     });
     plugin.conference.sendMessage({
-      payload: "✅ Statement has been signed: " + formInput.name,
+      payload: '✅ Statement has been signed: ' + formInput.name,
       participantUuid: senderUuid,
     });
     input.remove();
@@ -203,4 +171,19 @@ const configureConference = (config: ConferenceConfig): void => {
   plugin.conference.lock({
     lock: config.conferenceOptions.lockConference
   });
+}
+
+const getLocation = async (): Promise<GeolocationPosition> => {
+  if ('geolocation' in navigator) {
+    const position: GeolocationPosition = await new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject);
+    })
+    return position;
+  } else {
+    throw new Error('Location not available');
+  }
+}
+
+const getGoogleMapsLink = (position: GeolocationPosition): string => {
+  return `https://www.google.com/maps/search/?api=1&query=${position.coords.latitude},${position.coords.longitude}`;
 }
