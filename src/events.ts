@@ -36,7 +36,13 @@ const handleAuthenticatedWithConference = (signalConference: {conferenceAlias: s
 };
 
 const handleMe = (participant: InfinityParticipant): void => {
-  setCurrentUser(participant);
+  // TODO: Before we received the participants directly, but now we receive an
+  // object indicating the room and the participants. Example:
+  // {
+  //   id: "main",
+  //   participants: [...]
+  // }
+  setCurrentUser((participant as any).participant as InfinityParticipant);
 };
 
 const handleDirectMessage = (message: any): void => {
@@ -57,6 +63,13 @@ const handleParticipants = (participants: InfinityParticipant[]): void => {
 };
 
 const handleParticipantJoined = (participant: InfinityParticipant): void => {
+  // TODO: Before we received the participants directly, but now we receive an
+  // object indicating the room and the participants. Example:
+  // {
+  //   id: "main",
+  //   participants: [...]
+  // }
+  participant = (participant as any).participant as InfinityParticipant
   if (participant.uuid !== getCurrentUser().uuid) {
     const displayName = getCleanDisplayName(participant);
     const message = `${displayName} has joined call 👋`;
@@ -65,6 +78,13 @@ const handleParticipantJoined = (participant: InfinityParticipant): void => {
 };
 
 const handleParticipantLeft = (participant: InfinityParticipant): void => {
+  // TODO: Before we received the participants directly, but now we receive an
+  // object indicating the room and the participants. Example:
+  // {
+  //   id: "main",
+  //   participants: [...]
+  // }
+  participant = (participant as any).participant as InfinityParticipant
   if (participant.uuid !== getCurrentUser().uuid) {
     const displayName = getCleanDisplayName(participant);
     const message = `${displayName} has left call 👋`;

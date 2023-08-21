@@ -115,7 +115,7 @@ export const getFeccParticipantsOptions = (): ChecklistElement['options'] => {
     return participants;
   } else {
     return [{
-      id: '0',
+      id: '1',
       label: 'NONE'
     }]
   }

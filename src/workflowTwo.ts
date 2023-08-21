@@ -58,6 +58,7 @@ export const showVideoFecc = async (): Promise<void> => {
     const feccUuid = inputParams.feccUuid;
     const hostPin = btoa(inputParams.hostPin);
     const conferenceAlias = getConferenceAlias();
+    console.log(getCurrentUser())
     const displayName = getCurrentUser().displayName;
 
     form.remove();

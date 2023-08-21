@@ -1,4 +1,4 @@
-import { FormPayload, RPCCallPayload } from "@pexip/plugin-api"
+import { RPCCallPayload } from "@pexip/plugin-api"
 import { getPlugin } from "./plugin"
 
 export const popUpId = 'popUpIdWorkFlow'
