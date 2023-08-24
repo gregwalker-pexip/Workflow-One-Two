@@ -1,6 +1,12 @@
-import {createLogger} from '@pexip/logger';
-import {setLogger as setPluginApiLogger} from '@pexip/plugin-api';
+import pino, { type Logger } from 'pino';
 
-const rootLogger = createLogger();
-export const logger = rootLogger.child({name: 'modal-plugin'});
-setPluginApiLogger(logger);
+export const getLogger = (name: string): Logger => {
+  const logger = pino({
+    name,
+    level: 'info',
+    browser: {
+      asObject: true
+    }
+  }).child({ name });
+  return logger;
+};
